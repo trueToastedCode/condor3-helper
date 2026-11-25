@@ -644,7 +644,16 @@ static size_t MakeTexture(uint8_t* dst, size_t cap, int id, int drop, char* msg)
     if (id < 0 || (uint32_t)id >= g_ntex) { sprintf(msg, "bad texture id %d", id); return 0; }
     f = &g_texfile[id];
     if (!f->p) {
-        char p[MAX_PATH * 2]; _snprintf(p, sizeof p, "%s\\Autogen\\%s", g_dir, g_tex[id]);
+        char p[MAX_PATH * 2];
+        if (!_strnicmp(g_tex[id], "Landscapes\\", 11)) {
+            // Texture path relative to the Condor folder ("Landscapes\<name>\Textures\x.dds"), not to Autogen/:
+            // the landscape folder is <root>\Landscapes\<name>, so <root> is two levels above it.
+            char root[MAX_PATH], * c;
+            strncpy(root, g_dir, sizeof root - 1); root[sizeof root - 1] = 0;
+            c = strrchr(root, '\\'); if (c) { *c = 0; c = strrchr(root, '\\'); if (c) *c = 0; }
+            _snprintf(p, sizeof p, "%s\\%s", root, g_tex[id]);
+        } else
+            _snprintf(p, sizeof p, "%s\\Autogen\\%s", g_dir, g_tex[id]);
         *f = ReadFileAll(p);
         if (!f->p) { sprintf(msg, "cannot read %s", p); return 0; }
         if (f->n >= 8 && !memcmp(f->p, "\x89PNG", 4)) { if (PngToDds(f)) Log("TEXTURE %d: %s is a PNG, converted to a 32-bit DDS", id, g_tex[id]); }
